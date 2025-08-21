@@ -8,32 +8,53 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  final TextEditingController controller = TextEditingController();
+  Future<String>? _cityStringFuture;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Center(
-          child: Column(
-            spacing: 32,
-            children: [
-              TextFormField(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: "Postleitzahl",
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Center(
+            child: Column(
+              spacing: 32,
+              children: [
+                TextFormField(
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: "Postleitzahl",
+                  ),
+                  controller: controller,
                 ),
-              ),
-              OutlinedButton(
-                onPressed: () {
-                  // TODO: implementiere Suche
-                },
-                child: const Text("Suche"),
-              ),
-              Text(
-                "Ergebnis: Noch keine PLZ gesucht",
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-            ],
+                OutlinedButton(
+                  onPressed: () {
+                    final zip = controller.text.trim();
+                    _cityStringFuture = getCityFromZip(zip);
+                  },
+                  child: const Text("Suche"),
+                ),
+                const SizedBox(height: 16),
+                _cityStringFuture == null
+                    ? const Text("Ergebnis: Noch keine PLZ gesucht")
+                    : FutureBuilder<String>(
+                        future: _cityStringFuture,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const CircularProgressIndicator();
+                          } else if (snapshot.hasError) {
+                            return Text("Fehler: ${snapshot.error}");
+                          } else if (snapshot.hasData) {
+                            return Text("Ergebnis: ${snapshot.data}");
+                          } else {
+                            return const Text("Unbekannte Stadt");
+                          }
+                        },
+                      ),
+              ],
+            ),
           ),
         ),
       ),
@@ -42,13 +63,17 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
-    // TODO: dispose controllers
+    controller.dispose();
     super.dispose();
   }
 
   Future<String> getCityFromZip(String zip) async {
     // simuliere Dauer der Datenbank-Anfrage
     await Future.delayed(const Duration(seconds: 3));
+
+    if (zip.isEmpty) {
+      throw 'Postleitzahl darf nicht leer sein';
+    }
 
     switch (zip) {
       case "10115":
